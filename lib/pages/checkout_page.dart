@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../state/carrinho_model.dart';
+import '../state/pedidos_model.dart';
 import '../util/formatar.dart';
 
 class CheckoutPage extends StatelessWidget {
@@ -77,13 +78,21 @@ class CheckoutPage extends StatelessWidget {
     );
   }
 
-  void _finalizar(BuildContext context) {
+  // Agora é async: grava o pedido no SQLite antes de fechar a tela.
+  Future<void> _finalizar(BuildContext context) async {
     final carrinho = context.read<CarrinhoModel>();
+    final pedidos = context.read<PedidosModel>();
     final total = carrinho.valorTotal; // lê ANTES de limpar
-    carrinho.limpar();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Pedido de ${formatarPreco(total)} finalizado!')),
+    // Guardar antes do await: não usar o context depois de uma pausa assíncrona.
+    final messenger = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(context);
+
+    // Grava no banco, limpa o carrinho e recarrega a lista de pedidos.
+    await pedidos.finalizar(carrinho);
+
+    messenger.showSnackBar(
+      SnackBar(content: Text('Pedido de ${formatarPreco(total)} salvo no banco!')),
     );
-    Navigator.of(context).pop();
+    navigator.pop();
   }
 }
